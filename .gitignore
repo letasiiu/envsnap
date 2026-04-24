@@ -1,0 +1,9 @@
+node_modules/
+
+out/
+.env.local
+npm-debug.log*
+.env
+coverage/
+*.js.map
+.next/
