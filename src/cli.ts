@@ -73,42 +73,22 @@ program
   .command('diff <snapshotA> <snapshotB>')
   .description('Show differences between two named snapshots')
   .option('-d, --dir <dir>', 'Storage directory for snapshots')
-  .action(async (snapshotA: string, snapshotB: string, options: { dir?: string }) => {
+  .option('--no-color', 'Disable colored output')
+  .action(async (snapshotA: string, snapshotB: string, options: { dir?: string; color?: boolean }) => {
     try {
       const config = getDefaultConfig();
       const storageDir = resolveStorageDir(options.dir ?? config.storageDir);
       const a = await loadSnapshot(snapshotA, storageDir);
       const b = await loadSnapshot(snapshotB, storageDir);
       const result = diffSnapshots(a, b);
-      const output = formatDiff(result);
+      const output = formatDiff(result, { color: options.color !== false });
       if (!output.trim()) {
-        console.log('No differences found between snapshots.');
+        console.log(`✔ Snapshots "${snapshotA}" and "${snapshotB}" are identical.`);
       } else {
         console.log(output);
       }
     } catch (err) {
       console.error(`✖ Failed to diff snapshots: ${(err as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-/**
- * `envsnap restore <name>` — print export statements to restore a snapshot
- */
-program
-  .command('restore <name>')
-  .description('Print export statements to restore a snapshot into the current shell')
-  .option('-d, --dir <dir>', 'Storage directory for snapshots')
-  .action(async (name: string, options: { dir?: string }) => {
-    try {
-      const config = getDefaultConfig();
-      const storageDir = resolveStorageDir(options.dir ?? config.storageDir);
-      const snapshot = await loadSnapshot(name, storageDir);
-      const lines = Object.entries(snapshot.env)
-        .map(([key, value]) => `export ${key}=${JSON.stringify(value)}`);
-      console.log(lines.join('\n'));
-    } catch (err) {
-      console.error(`✖ Failed to restore snapshot: ${(err as Error).message}`);
       process.exit(1);
     }
   });
