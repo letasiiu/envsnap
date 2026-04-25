@@ -30,6 +30,13 @@ describe('exportToDotenv', () => {
     const result = exportToDotenv(makeSnapshot());
     expect(result).toContain('# Exported from envsnap snapshot: test-snap');
   });
+
+  it('produces one line per env key', () => {
+    const snap = makeSnapshot({ env: { A: '1', B: '2', C: '3' } });
+    const result = exportToDotenv(snap);
+    const keyLines = result.split('\n').filter((line) => !line.startsWith('#') && line.trim() !== '');
+    expect(keyLines).toHaveLength(3);
+  });
 });
 
 describe('exportToJson', () => {
