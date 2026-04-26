@@ -1,7 +1,12 @@
-import * as fs from "fs";
-import * as path from "path";
-import { loadSnapshot, saveSnapshot } from "../snapshot";
-import type { Snapshot } from "../snapshot";
+import * as fs from 'fs';
+import * as path from 'path';
+import { loadSnapshot, saveSnapshot } from '../snapshot';
+import { resolveStorageDir } from '../config';
+
+export function snapshotExists(name: string, storageDir: string): boolean {
+  const filePath = path.join(storageDir, `${name}.json`);
+  return fs.existsSync(filePath);
+}
 
 export interface CopyResult {
   success: boolean;
@@ -10,17 +15,14 @@ export interface CopyResult {
   error?: string;
 }
 
-export function snapshotExists(storageDir: string, name: string): boolean {
-  const filePath = path.join(storageDir, `${name}.json`);
-  return fs.existsSync(filePath);
-}
-
 export async function copySnapshot(
-  storageDir: string,
   sourceName: string,
-  destName: string
+  destName: string,
+  storageDir?: string
 ): Promise<CopyResult> {
-  if (!snapshotExists(storageDir, sourceName)) {
+  const dir = storageDir ?? resolveStorageDir();
+
+  if (!snapshotExists(sourceName, dir)) {
     return {
       success: false,
       sourceName,
@@ -29,7 +31,7 @@ export async function copySnapshot(
     };
   }
 
-  if (snapshotExists(storageDir, destName)) {
+  if (snapshotExists(destName, dir)) {
     return {
       success: false,
       sourceName,
@@ -38,15 +40,14 @@ export async function copySnapshot(
     };
   }
 
-  const source: Snapshot = await loadSnapshot(storageDir, sourceName);
-
-  const copy: Snapshot = {
-    ...source,
+  const snapshot = await loadSnapshot(sourceName, dir);
+  const copied = {
+    ...snapshot,
     name: destName,
     createdAt: new Date().toISOString(),
   };
 
-  await saveSnapshot(storageDir, copy);
+  await saveSnapshot(copied, dir);
 
   return { success: true, sourceName, destName };
 }

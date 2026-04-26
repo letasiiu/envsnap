@@ -1,69 +1,78 @@
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
-import { copySnapshot, snapshotExists } from "./copy";
-import { saveSnapshot } from "../snapshot";
-import type { Snapshot } from "../snapshot";
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { copySnapshot, snapshotExists } from './copy';
+import { saveSnapshot } from '../snapshot';
 
 function makeTmpDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "envsnap-copy-test-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'envsnap-copy-'));
 }
 
-function makeSnapshot(name: string): Snapshot {
+function makeSnapshot(name: string) {
   return {
     name,
-    createdAt: "2024-01-01T00:00:00.000Z",
-    env: { FOO: "bar", BAZ: "qux" },
+    createdAt: new Date().toISOString(),
+    env: { FOO: 'bar', BAZ: '123' },
   };
 }
 
-describe("snapshotExists", () => {
-  it("returns false when snapshot file does not exist", () => {
+describe('snapshotExists', () => {
+  it('returns false when snapshot file is missing', () => {
     const dir = makeTmpDir();
-    expect(snapshotExists(dir, "missing")).toBe(false);
+    expect(snapshotExists('missing', dir)).toBe(false);
   });
 
-  it("returns true when snapshot file exists", async () => {
+  it('returns true when snapshot file exists', async () => {
     const dir = makeTmpDir();
-    await saveSnapshot(dir, makeSnapshot("present"));
-    expect(snapshotExists(dir, "present")).toBe(true);
+    await saveSnapshot(makeSnapshot('existing'), dir);
+    expect(snapshotExists('existing', dir)).toBe(true);
   });
 });
 
-describe("copySnapshot", () => {
-  it("copies a snapshot to a new name", async () => {
+describe('copySnapshot', () => {
+  it('copies a snapshot to a new name', async () => {
     const dir = makeTmpDir();
-    await saveSnapshot(dir, makeSnapshot("original"));
-    const result = await copySnapshot(dir, "original", "clone");
+    await saveSnapshot(makeSnapshot('source'), dir);
+
+    const result = await copySnapshot('source', 'dest', dir);
+
     expect(result.success).toBe(true);
-    expect(result.sourceName).toBe("original");
-    expect(result.destName).toBe("clone");
-    expect(snapshotExists(dir, "clone")).toBe(true);
+    expect(result.sourceName).toBe('source');
+    expect(result.destName).toBe('dest');
+    expect(snapshotExists('dest', dir)).toBe(true);
   });
 
-  it("preserves env vars in the copy", async () => {
+  it('returns error when source does not exist', async () => {
     const dir = makeTmpDir();
-    await saveSnapshot(dir, makeSnapshot("src"));
-    await copySnapshot(dir, "src", "dst");
-    const content = fs.readFileSync(path.join(dir, "dst.json"), "utf-8");
-    const parsed = JSON.parse(content);
-    expect(parsed.env).toEqual({ FOO: "bar", BAZ: "qux" });
-    expect(parsed.name).toBe("dst");
-  });
+    const result = await copySnapshot('ghost', 'dest', dir);
 
-  it("fails when source does not exist", async () => {
-    const dir = makeTmpDir();
-    const result = await copySnapshot(dir, "ghost", "copy");
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/does not exist/);
   });
 
-  it("fails when destination already exists", async () => {
+  it('returns error when destination already exists', async () => {
     const dir = makeTmpDir();
-    await saveSnapshot(dir, makeSnapshot("a"));
-    await saveSnapshot(dir, makeSnapshot("b"));
-    const result = await copySnapshot(dir, "a", "b");
+    await saveSnapshot(makeSnapshot('source'), dir);
+    await saveSnapshot(makeSnapshot('dest'), dir);
+
+    const result = await copySnapshot('source', 'dest', dir);
+
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/already exists/);
+  });
+
+  it('preserves env vars and updates name and createdAt', async () => {
+    const dir = makeTmpDir();
+    const original = makeSnapshot('source');
+    await saveSnapshot(original, dir);
+
+    await copySnapshot('source', 'dest', dir);
+
+    const destFile = path.join(dir, 'dest.json');
+    const dest = JSON.parse(fs.readFileSync(destFile, 'utf-8'));
+
+    expect(dest.name).toBe('dest');
+    expect(dest.env).toEqual(original.env);
+    expect(dest.createdAt).not.toBe(original.createdAt);
   });
 });
