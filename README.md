@@ -22,6 +22,9 @@ envsnap diff my-snapshot production-snapshot
 
 # Restore a snapshot
 envsnap restore my-snapshot
+
+# Delete a snapshot
+envsnap delete my-snapshot
 ```
 
 Snapshots are stored locally in `~/.envsnap/` and can be scoped per project using the `--project` flag:
