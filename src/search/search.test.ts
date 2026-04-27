@@ -57,6 +57,15 @@ describe('searchSnapshots', () => {
       'At least one of key or value must be provided'
     );
   });
+
+  it('includes createdAt in each result', async () => {
+    const results = await searchSnapshots({ key: 'PORT', storageDir: STORAGE_DIR });
+    expect(results).toHaveLength(2);
+    results.forEach(result => {
+      expect(result).toHaveProperty('createdAt');
+      expect(typeof result.createdAt).toBe('string');
+    });
+  });
 });
 
 describe('formatSearchResults', () => {
