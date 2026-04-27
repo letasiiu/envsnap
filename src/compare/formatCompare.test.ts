@@ -39,6 +39,16 @@ describe('formatCompareSummary', () => {
     const summary = formatCompareSummary(result);
     expect(summary).not.toContain('Unchanged');
   });
+
+  it('shows counts for added, removed, and changed keys', () => {
+    const a = makeSnapshot('a', { REMOVED: 'old', CHANGED: 'before' });
+    const b = makeSnapshot('b', { ADDED: 'new', CHANGED: 'after' });
+    const result = compareSnapshots(a, b);
+    const summary = formatCompareSummary(result);
+    expect(summary).toContain('Added: 1');
+    expect(summary).toContain('Removed: 1');
+    expect(summary).toContain('Changed: 1');
+  });
 });
 
 describe('formatCompareTable', () => {
