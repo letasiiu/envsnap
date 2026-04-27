@@ -1,53 +1,53 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { loadSnapshot, saveSnapshot } from '../snapshot';
-import { resolveStorageDir } from '../config';
+import * as fs from "fs";
+import * as path from "path";
+import { loadSnapshot, saveSnapshot } from "../snapshot";
+import { resolveStorageDir } from "../config";
 
-export function snapshotExists(name: string, storageDir: string): boolean {
+export function snapshotExists(storageDir: string, name: string): boolean {
   const filePath = path.join(storageDir, `${name}.json`);
   return fs.existsSync(filePath);
 }
 
 export interface CopyResult {
   success: boolean;
-  sourceName: string;
-  destName: string;
+  source: string;
+  destination: string;
   error?: string;
 }
 
 export async function copySnapshot(
-  sourceName: string,
-  destName: string,
+  source: string,
+  destination: string,
   storageDir?: string
 ): Promise<CopyResult> {
   const dir = storageDir ?? resolveStorageDir();
 
-  if (!snapshotExists(sourceName, dir)) {
+  if (!snapshotExists(dir, source)) {
     return {
       success: false,
-      sourceName,
-      destName,
-      error: `Source snapshot "${sourceName}" does not exist.`,
+      source,
+      destination,
+      error: `Source snapshot "${source}" does not exist.`,
     };
   }
 
-  if (snapshotExists(destName, dir)) {
+  if (snapshotExists(dir, destination)) {
     return {
       success: false,
-      sourceName,
-      destName,
-      error: `Destination snapshot "${destName}" already exists.`,
+      source,
+      destination,
+      error: `Destination snapshot "${destination}" already exists.`,
     };
   }
 
-  const snapshot = await loadSnapshot(sourceName, dir);
+  const snapshot = await loadSnapshot(source, dir);
   const copied = {
     ...snapshot,
-    name: destName,
+    name: destination,
     createdAt: new Date().toISOString(),
   };
 
   await saveSnapshot(copied, dir);
 
-  return { success: true, sourceName, destName };
+  return { success: true, source, destination };
 }
